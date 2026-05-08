@@ -5,6 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum {
     TT_Return,
@@ -48,54 +49,43 @@ Lexer* New(const char* str){
     lx->line = 1;
     lx->pos = 0;
     lx->input = str;
-    lx->ch = NULL;
 return lx;
 }
 
 //HELPER FUNCTIONS
-char* peek (Lexer* l, int offset){
+char peek (Lexer* l, int offset){
     int posn = l->pos + offset;
-    if (posn >= l->inputLen){
+    if (l->pos >= l->inputLen){
         return '\0';
     }
-return l->input[pos];
+return l->input[posn];
 }
 
-char* readCurrentAndAdvance(Lexer* l){
-    if (l->position >= l->inputLen){
-        return '\0';
+void readCurrentAndAdvance(Lexer* l){
+    if (l->pos >= l->inputLen){
+        l->ch = l->input[l->pos] == '\0';
     } else {
-    return l->input[l->pos];
+    l->ch = l->input[l->pos];
     }
-return l->pos++; 
+ l->pos++; 
 }
 
-//helper func: skip white space
-void skws (Lexer* l){
-    while (l->ch == ' ' || l->ch == '\t' || l->ch == '\n'){
-        if (l->ch == '\n'){
-            l->line++;
-        }
-    readCurrentAndAdvance(l);
-    }
-}
-
-int isDigit (char c){
+bool isDigit (char c){
     return c >= '0' && c <= '9';
 }
 
-int isLetter (char c){
+bool isLetter (char c){
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-int isIdentifier (char c){
+bool isIdentifier (char c){
     return isLetter(c) || isDigit(c);
 }
 
-Token makeT (TokenType t, char* lit){
+Token makeT (TokenType t, char* val){
     Token tk;
     tk.type = t;
-    tk.literal = lit;
+    tk.value = val;
 return tk;
 }
 
@@ -114,21 +104,6 @@ Token readNum (Lexer* l){
 return makeT(TT_Number, num);    
 }
 
-Token readIdentifier (Lexer* x){
-    size_t st = x->pos - 1;
-    while (isIdentifier(peek(x, 1))){
-        readCurrentAndAdvance(x);
-    }
-
-    size_t len = x->pos - st;
-    char* iden = malloc(len + 1);
-    strncpy(iden, &x->input[st], len);
-    iden[len] = '\0';
-
-    TokenType type = lookUpKey(iden);
-return makeT(type, iden);
-}
-
 TokenType lookUpKey(char* str){
     if (strcmp(str, "rtrn") == 0){
         return TT_Return;
@@ -143,6 +118,21 @@ TokenType lookUpKey(char* str){
     } else {
         return TT_Identifier;
     }
+}
+
+Token readIdentifier (Lexer* x){
+    size_t st = x->pos - 1;
+    while (isIdentifier(peek(x, 1))){
+        readCurrentAndAdvance(x);
+    }
+
+    size_t len = x->pos - st;
+    char* iden = malloc(len + 1);
+    strncpy(iden, &x->input[st], len);
+    iden[len] = '\0';
+
+    TokenType type = lookUpKey(iden);
+return makeT(type, iden);
 }
 
 Token readStr (Lexer* e){
@@ -168,10 +158,23 @@ Token readStr (Lexer* e){
 return makeT(TT_String, str);    
 }
 
+void skws (Lexer* l){
+    while (l->ch == ' ' || l->ch == '\t' || l->ch == '\n'){
+        if (l->ch == '\n'){
+            l->line++;
+        }
+    readCurrentAndAdvance(l);
+    }
+}
+
 Token nextToken (Lexer* r){
     skws(r);
-    if (r->ch == '\0' && r->pos == 1){
-        readCurrentAndAdvance(r);
+
+    if (r->pos >= strlen(r->input)){ 
+        Token tk;
+        tk.value = "";
+        tk.type = TT_EOF;
+        return tk;
     }
 
     Token t;
@@ -187,39 +190,39 @@ Token nextToken (Lexer* r){
 
     switch (r->ch){
         case '(':
-            t = makeT(TT_Lparen, '(');
+            t = makeT(TT_Lparen,"(");
             readCurrentAndAdvance(r);
             return t;
         case ')':
-            t  = makeT(TT_Rparen, ')');
+            t  = makeT(TT_Rparen, ")");
             readCurrentAndAdvance(r);
             return t;
         case ';':
-            t = makeT(TT_Semicolon, ';');
+            t = makeT(TT_Semicolon, ";");
             readCurrentAndAdvance(r);
             return t;
         case '{':
-            t = makeT(TT_LBrace, '{');
+            t = makeT(TT_LBrace, "{");
             readCurrentAndAdvance(r);
             return t;
         case '}':
-            t = makeT(TT_RBrace, '}');
+            t = makeT(TT_RBrace, "}");
             readCurrentAndAdvance(r);
             return t;
         case '+':
-            t = makeT(TT_Plus, '+');
+            t = makeT(TT_Plus, "+");
             readCurrentAndAdvance(r);
             return t;
         case '-':
-            t = makeT(TT_Minus, '-');
+            t = makeT(TT_Minus, "-");
             readCurrentAndAdvance(r);
             return t;
         case '/':
-            t = makeT(TT_Slash, '/');
+            t = makeT(TT_Slash, "/");
             readCurrentAndAdvance(r);
             return t;
         case '*':
-            t = makeT(TT_Astk, '*');
+            t = makeT(TT_Astk, "*");
             readCurrentAndAdvance(r);
             return t;
     }

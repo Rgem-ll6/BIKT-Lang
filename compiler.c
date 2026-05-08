@@ -5,6 +5,18 @@
 
 #include "lexer.h"
 
+char* readFile(FILE* file) {
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    char* buffer = (char*)malloc(size + 1);
+    fread(buffer, 1, size, file);
+    buffer[size] = '\0';
+    
+    return buffer;
+}
+
 bool isValidBiktFile(char* str){
     if (strlen(str) < 5) return false;
 return strcmp(str + strlen(str) - 5, ".bikt") == 0;
@@ -25,10 +37,19 @@ int main(int argc, char** argv)
         fprintf(stderr, "Runtime Error: file must end with '.bikt'\n");
     return -1;
     }
-    char buffer[256];
-    while (fgets(buffer, sizeof(buffer), file)){
-        printf("%s", buffer);
-    }
 
-return 0;
+    char* sourceCode = readFile(file);
+    fclose(file);
+    
+    Lexer* lexer = New(sourceCode);
+    Token tk;
+    //DEBUG
+    do {
+        tk = nextToken(lexer);
+        printf("Type: %d, Value: '%s'\n", tk.type, tk.value);
+    } while (tk.type != TT_EOF);
+
+    free(sourceCode);
+    free(lexer);
+    return 0;
 }
