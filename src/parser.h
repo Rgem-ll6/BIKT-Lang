@@ -1,26 +1,19 @@
 /*
 
-HELLO DEAR READER, I AM RHEMA, A 16 YEAR OLD LOW LEVEL AND SYSTEM LEVEL DEVELOPER
-I WRITE IN C, C++ AND ASSEMBLY FOR FUN
-I AM PROBABLY SCHIZOPHRENIC BUT NOT SURE, CUS I SOMETIMES HEAR VOICES 
-AND SEE THINGS BUT ITS MOSTLY OR PROBABLY MY IMAGINATION
-I'M PRETTY SURE NO ONE WILL READ THIS SINCE THIS IS LIKE THE SOURCE CODE FOR A LANGUAGE
-AND NO ONE REALLY CARES ABOUT THAT
-BUT IF YOU DO, GET READY TO READ 800+ LINES OF PURE MISERY
-I HOPE YOU ENJOY
-THERE WILL BE SOME WEIRD COMMENTS BUT SOMETIMES JUST READ THE CODE AND MOVE ON WITH YOUR DAY
-(I USE ARCH BTW) AND...
-..I WAS GIVEN DIVINE INTELLECT BY GOD!!!!
-
-THIS IS DEFINITELY BRAG CUS I DIDNT USE LLMs/AI
-LIKE I SAID, I WAS GIVEN DIVINE INTELLECT BY GOD
-EVERY LINE I WROTE TOOK A TOLL ON MY MENTAL HEALTH
-BY THE TIME YOU'RE READING THIS I'VE PROBABLY GONE SENILE ATP
-LIKE 95% INSANE, BLYAAAAAAAT!!!!
-OH WELL,WEFWEQFEQFEREGFEGE!!!!
+HEY, I'M THE AUTHOR OF BIKT, GO BY THE NAME 'RHEMA' BUT MOST PEOPLE CALL ME
+'RHEMA', I'M A 16 YEAR OLD LOW LEVEL AND SYSTEM LEVEL DEVELOPER, I BASICALLY HATE ALL HIGH LEVEL LANGUAGES
+SOMETIMES I THINK I'M SCHIZOPHRENIC CUS I THINK I HEAR VOICES AND HALLUCINATE BUT IT
+COULD ALL BE JUST PART OF MY IMAGINATION.
+I PRETTY MUCH DON'T LIKE SOCIALIZING PRETTY MUCH NOT INTENTIONALLY, I MEAN I TRY!
+BUT SINCE THAT'S IMPOSSIBLE I CAME UP WITH AN IDEA, BIKT AND BIKT-OS, SO UHH TO WRAP THINGS UP
+IF YOU'RE ACTUALLY READING THIS AND PLAN ON READING THE REST OF THE SOURCECODE
+JUST KNOW YOU'RE ABOUT TO READ 800+ LINES OF PURE MISERY...
+EVERY LINE FROM 200+ WAS WRITTEN IN PAIN, I'M ALSO PRETTY SURE I'VE GONE SENILE, BUT OH WELL
+ENJOY...
 
 */
 
+//macros..
 #ifndef PARSER_H
 #define PARSER_H
 
@@ -31,6 +24,7 @@ OH WELL,WEFWEQFEQFEREGFEGE!!!!
 #include "lexer.h"
 #include "ast.h"
 
+//main parser struct...
 typedef struct {
 	Lexer* lx;
 	Token current_token;
@@ -57,10 +51,11 @@ Statement* parseBlockStatement(Parser* p);
 Statement* parseAssignStatement(Parser* p);
 Statement* parseExpressionStatement(Parser* p);
 
-//Key Methods...
+//core methods
 Method* parseMethod(Parser* p);
 Program* parseProgram(Parser* p);
 
+//Parser initializer
 Parser* initParser(const char* input){
 	if (input == NULL){
 		fprintf(stderr, "Runtime Parser Error: Failed to initialize parser with NULL input\n");
@@ -119,6 +114,7 @@ Token parser_peekNext(Parser* p){
 	return p->peek_token;
 }
 
+//basically a load of shit...
 bool parser_match(Parser* p, TokenType type){
 	if (p == NULL) return false;
 
@@ -160,7 +156,7 @@ Expression* parseAdditiveExpr(Parser* p){
 		strcpy(op, op_token.value);
 
 		 parser_advance(p);
-
+         //using the multiplicative expression cause of order of precedence...
 		 Expression* right = parseMultiplicativeExpr(p);
 		 if (right == NULL){
 			fprintf(stderr, "Compiler Error: Expected Expression after the %s operator", op);
@@ -169,6 +165,7 @@ Expression* parseAdditiveExpr(Parser* p){
 			return NULL;
 		 }
 		 
+         //creating the AST Node
 		 Expression* combined = (Expression*)malloc(sizeof(Expression));
 		 combined->type = EXPR_BINARY_OP;
 		 combined->data.binOP.left = left;
@@ -180,6 +177,7 @@ Expression* parseAdditiveExpr(Parser* p){
 	return left;
 }
 
+//y'know exprs for building block like 5, "ehellleo",etc.
 Expression* parsePrimaryExpr(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 	Token current = parser_peek(p);
@@ -216,9 +214,11 @@ Expression* parsePrimaryExpr(Parser* p){
 			func_expr->data.func.func_name = name;
 			parser_advance(p);
 
+            //for function calls not definitions, the definition will be in the parseMethod() method
 			Expression** arguments = NULL;
 			size_t arg_count = 0;
 
+            //man this is where the misery starts hehe...
 			if (parser_peek(p).type != TT_RParen){
 				Expression* arg = parseAdditiveExpr(p);
 				if (arg == NULL){
@@ -229,7 +229,7 @@ Expression* parsePrimaryExpr(Parser* p){
 				arguments = (Expression**)malloc(sizeof(Expression*));
 				arguments[0] = arg;
 				arg_count = 1;
-
+                    //i was a hero but you get the glory!
 					while (parser_peek(p).type == TT_Comma && !p->has_error){
 						parser_advance(p);
 
@@ -313,6 +313,7 @@ Expression* parseMultiplicativeExpr(Parser* p){
 	return left;
 }
 
+//expressions like '-5' and '+70'
 Expression* parseUnaryExpr(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
@@ -322,6 +323,7 @@ Expression* parseUnaryExpr(Parser* p){
 
 		parser_advance(p);
 
+        //it's a recursive function
 		Expression* operand = parseUnaryExpr(p);
 		if (operand == NULL){
 			fprintf(stderr, "Compiler Error: Expected expression after unary operator %s\n", op);
@@ -329,7 +331,7 @@ Expression* parseUnaryExpr(Parser* p){
 			free(op);
 			return NULL;
 		}
-
+        //AST* node
 		Expression* unary_expr = (Expression*)malloc(sizeof(Expression));
 		unary_expr->type = EXPR_UNARY_OP;
 		unary_expr->data.uOP.operator = op;
@@ -340,6 +342,7 @@ Expression* parseUnaryExpr(Parser* p){
 	return parsePrimaryExpr(p);
 }
 
+//conditions '5 < 7' or '20 > 10'
 Expression* parseComparisonExpr(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
@@ -374,11 +377,12 @@ Expression* parseComparisonExpr(Parser* p){
 Statement* parseIfStatement(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
+    //expect 'if' keyword
 	if (!parser_expect(p, TT_If, "Parser Error: Expected 'if' statement\n")){
 		return NULL;
 	}
 
-	if (!parser_expect(p, TT_LParen, "Compiler Error: EXpected '(' after the if statement\n")){
+	if (!parser_expect(p, TT_LParen, "Compiler Error: Expected '(' after the if statement\n")){
 		return NULL;
 	}
 
@@ -393,15 +397,17 @@ Statement* parseIfStatement(Parser* p){
 		return NULL;
 	}
 
+    //have you also gone mad?
 	Statement** then_block = NULL;
 	size_t then_count = 0;
 
 	if (parser_peek(p).type == TT_LBrace){
-		parser_advance(p);
+		parser_advance(p); //consume the left brace, parser_expect() also consumes so don't be scared...
 		while (parser_peek(p).type != TT_RBrace && !p->has_error){
 			Statement* stmt = parseStatement(p);
 			if (stmt == NULL) continue;
 
+            //i know you'll go coocoo when you see this
 			then_block = (Statement**)realloc(then_block, (then_count + 1) * sizeof(Statement*));
 			then_block[then_count] = stmt;
 			then_count++;
@@ -415,6 +421,7 @@ Statement* parseIfStatement(Parser* p){
 	Statement** else_block = NULL;
 	size_t else_count = 0;
 
+    //check if there's the 'else' keyword after the then_block
 	if (parser_peek(p).type == TT_Else){
 		parser_advance(p);
 
@@ -426,6 +433,7 @@ Statement* parseIfStatement(Parser* p){
 				Statement* stmt = parseStatement(p);
 				if (stmt == NULL) continue;
 
+                //hahahaha, its just a realloc, memory reallocation, get it?
 				else_block = (Statement**)realloc(else_block, (else_count + 1) * sizeof(Statement*));
 				else_block[else_count] = stmt;
 				else_count++;
@@ -437,6 +445,7 @@ Statement* parseIfStatement(Parser* p){
 		}
 	}
 
+    //this is memory allocation, get it? malloc?
 	Statement* if_stmt = (Statement*)malloc(sizeof(Statement));
 
 	if_stmt->type = IF;
@@ -486,6 +495,8 @@ Statement* parseStatement(Parser* p){
 	return parseExpressionStatement(p);
 }
 
+//parse any expression brev....
+//whohooooo lallal!
 Statement* parseExpressionStatement(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
@@ -505,6 +516,9 @@ Statement* parseExpressionStatement(Parser* p){
 	return expr_stmt;
 }
 
+//Let statement....
+//i plan on using Rust's system of creating variables...
+//let a: int = 5; OR let name: string = "Rhema Ugwu";
 Statement* parseLetStatement(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
@@ -569,6 +583,7 @@ Statement* parseLetStatement(Parser* p){
 	return let_stmt;
 }
 
+//assignment stmt, ass operator '=' hahahahaha!
 Statement* parseAssignStatement(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
@@ -580,7 +595,7 @@ Statement* parseAssignStatement(Parser* p){
 
 	char* var_name = (char*)malloc(strlen(parser_peek(p).value) + 1);
 	strcpy(var_name, parser_peek(p).value);
-	parser_advance(p);
+	parser_advance(p); //always remember when to advance, to consume tokens or to move ahead...
 
 	if (!parser_expect(p, TT_Equals, "Compiler Error: Expected '=' after variable name\n")){
 		free(var_name);
@@ -609,6 +624,7 @@ Statement* parseAssignStatement(Parser* p){
 	return ass_stmt;
 }
 
+//RETURNNNN!! im pretty sure you've lost your mind already hehe
 Statement* parseReturnStatement(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
@@ -632,6 +648,8 @@ Statement* parseReturnStatement(Parser* p){
 		return NULL;
 	}
 
+    //AST* node, one of my favorites parts of the lexer hehe...
+    //Creating these AST nodes!
 	Statement* ret_stmt = (Statement*)malloc(sizeof(Statement));
 	ret_stmt->type = RETURN;
 	ret_stmt->data.rtrn_s.value = ret_expr;
@@ -639,6 +657,7 @@ Statement* parseReturnStatement(Parser* p){
 	return ret_stmt;
 }
 
+//PRINT, pRINT, prINT, priNT, prinT, print, yabadabadooo!!!!!!!!!!
 Statement* parsePrintStatement(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 
@@ -673,6 +692,12 @@ Statement* parsePrintStatement(Parser* p){
 	return print_stmt;
 }
 
+//This is like a scope, not like actually, IT IS a scope
+/*
+{
+  statements....
+}
+*/
 Statement* parseBlockStatement(Parser* p){
 	if (p == NULL || p->has_error ) return NULL;
 	
@@ -682,7 +707,9 @@ Statement* parseBlockStatement(Parser* p){
 
     Statement** stmts = NULL;
     size_t stmt_count = 0;
-
+    
+    //checking for EOF and the Right Brace so as to know the end of the scope
+    //and if its not a RBrace at the end, the expect down there checks that!
     while (parser_peek(p).type != TT_RBrace && parser_peek(p).type != TT_EOF && !p->has_error){
         Statement* stmt = parseStatement(p);
         if (stmt == NULL) continue;
@@ -695,7 +722,8 @@ Statement* parseBlockStatement(Parser* p){
     if (!parser_expect(p, TT_RBrace, "Compiler Error: Expected '}' after block of statements/scope\n")){
         return NULL;
     }
-
+    
+    //AST Node...
     Statement* blk = (Statement*)malloc(sizeof(Statement));
     blk->type = BLOCK;
     blk->data.blk_s.statements = stmts;
@@ -704,6 +732,9 @@ Statement* parseBlockStatement(Parser* p){
     return blk;
 }
 
+//NO SHIT, this is a no brainer method...
+//Even a beginner should look at the name and just write all code needed for it, am i right?
+//Too easy....I've gone senile! ahahhahahaah!
 Method* parseMethod(Parser* p){
     if (p == NULL || p->has_error) return NULL;
 
@@ -767,6 +798,7 @@ Method* parseMethod(Parser* p){
     parser_advance(p);
 
     Statement** body = NULL;
+    //body count? hahahahhahahaha! bruh what da hell!
     size_t body_count = 0; //hahahahahhaah!!!!
 
     while (parser_peek(p).type != TT_RBrace && parser_peek(p).type != TT_EOF && !p->has_error){
@@ -793,53 +825,58 @@ Method* parseMethod(Parser* p){
     return mthd;
 }
 
+//The main power house of the parser!!
 Program* parseProgram(Parser* p){
     if (p == NULL || p->has_error) return NULL;
 
     Program* program = (Program*)malloc(sizeof(Program));
     if (program == NULL){
-        fprintf(stderr, "Compiler Error: Failed to allocate Program node\n");
+        fprintf(stderr, "Failed to Allocate Program node!");
         return NULL;
     }
 
-    //zero initialize all...
+    //zero initialize everything
+    //like how the people should also becomes zero initialized, get it? you prolly don't
     program->funcs = NULL;
     program->func_count = 0;
     program->statements = NULL;
     program->stmt_count = 0;
 
     while (parser_peek(p).type != TT_EOF && !p->has_error){
+        //if its a method definition at the top and keeps track of how many methods (including method main(){})
         if (parser_peek(p).type == TT_Function){
             Method* mthd = parseMethod(p);
 
             if (mthd == NULL){
-                fprintf(stderr, "Compiler Error: Failed to Parse method %s definition\n", mthd->name);
+                fprintf(stderr, "Compiler Error: Failed to parse method %s definition\n", parser_peek(p).value);
                 p->has_error = true;
+                //no return NULL only p->has_error
                 break;
             }
 
-            program->funcs = (Method**)realloc(program->funcs, (program->func_count + 1) * sizeof(Method*));
-            program->funcs[program->func_count] = mthd;
-            program->func_count++;
-        } else {
-            Statement* stmt = parseStatemen(p);
+        program->funcs = (Method**)realloc(program->funcs, (program->func_count + 1) * sizeof(Method*));
+        program->funcs[program->func_count] = mthd;
+        program->func_count++;
 
+        } else {
+            Statement* stmt = parseStatement(p);
+            
             if (stmt == NULL){
                 fprintf(stderr, "Compiler Error: Unexpected token at top level %s\n", parser_peek(p).value);
                 p->has_error = true;
+                //no return NULL, only p->has_error
                 break;
             }
 
-            program->statements = (Statements**)realloc(program->statements, (program->stmt_count + 1) * sizeof(Statement*));
+            program->statements = (Statement**)realloc(program->statements, (program->stmt_count + 1) * sizeof(Statement*));
             program->statements[program->stmt_count] = stmt;
             program->stmt_count++;
         }
     }
 
+    //return the program eve if there are errors as you saw above we didnt return NULL
+    //like we normally do in some functions
     return program;
 }
-
-//and that my insane self concludes my parser.h
-//ehehehehehehehehe...!!!!!!!
 
 #endif
