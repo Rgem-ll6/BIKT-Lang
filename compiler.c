@@ -3,13 +3,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "lexer.h"
+#include "parser.h"
 
 char* readFile(FILE* file) {
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
     fseek(file, 0, SEEK_SET);
-    
     char* buffer = (char*)malloc(size + 1);
     fread(buffer, 1, size, file);
     buffer[size] = '\0';
@@ -39,17 +38,37 @@ int main(int argc, char** argv)
     }
 
     char* sourceCode = readFile(file);
+	if (sourceCode == NULL){
+		fprintf(stderr, "Compiler Error: Failed to read %s, its empty\n", argv[1]);
+		return -1;
+	}
+	printf("%s\n\n", sourceCode);
     fclose(file);
     
-    Lexer* lexer = New(sourceCode);
-    Token tk;
-    //DEBUG
-    do {
-        tk = nextToken(lexer);
-        printf("Type: %d, Value: '%s'\n", tk.type, tk.value);
-    } while (tk.type != TT_EOF);
+    Lexer* lexer = initLexer(sourceCode);
+	if (lexer == NULL){
+		fprintf(stderr, "Error: Failed to initialize Lexer!\n");
+		return -1;
+	}
+	
+	printf("***TOKENIZING***\n");
+	Token tk = nextToken(lexer);
+	int tcount = 0;
+	
+	while (tk.type != TT_EOF){
+		tcount++;
+
+		printf("Token %d: %d", tcount, tk.type);
+		if (tk.value != NULL){
+			printf(", Value: %s", tk.value);
+		}
+
+		printf("\n");	
+		destroyToken(&tk);
+		tk = nextToken(lexer);
+	}
 
     free(sourceCode);
-    free(lexer);
+    destroyLexer(lexer);
     return 0;
 }

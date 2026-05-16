@@ -3,233 +3,270 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum {
-    TT_Return,
-    TT_Number,
-    TT_String,
-    TT_Identifier,
-    TT_Print,
-    TT_Semicolon,
-    TT_EOF,
-    TT_Unknown,
-    TT_Lparen,
-    TT_Rparen,
-    TT_LBrace,
-    TT_RBrace,
-    TT_Function,
-    TT_If,
-    TT_Else,
-    TT_Comma,
-    TT_Plus,
-    TT_Minus,
-    TT_Astk,
-    TT_Slash
-} TokenType;
+#include "token.h"
 
 typedef struct {
-    TokenType type;
-    char* value;
-} Token;
-
-typedef struct {
-    const char* input;
-    size_t inputLen;
-    size_t pos;
-    size_t line;
-    char ch;
+	char* input;
+	size_t pos;
+	size_t line;
+	size_t column;
 } Lexer;
 
-Lexer* New(const char* str){
-    Lexer* lx = (Lexer*)malloc(sizeof(*lx));
-    lx->inputLen = strlen(str);
-    lx->line = 1;
-    lx->pos = 0;
-    lx->input = str;
-return lx;
+Lexer* initLexer(const char* input){
+	if (input == NULL){
+		fprintf(stderr, "Compiler Error: cannot init Lexer with NULL input\n");
+		return NULL;
+	}
+	Lexer* l = (Lexer*)malloc(sizeof(Lexer));
+	l->input = (char*)input;
+	l->pos = 0;
+	l->line = 1;
+	l->column = 0;
+	return l;
 }
 
-//HELPER FUNCTIONS
-char peek (Lexer* l, int offset){
-    int posn = l->pos + offset;
-    if (l->pos >= l->inputLen){
-        return '\0';
-    }
-return l->input[posn];
+void destroyToken(Token* tk){
+	if (tk == NULL) return;
+	if (tk->value != NULL){
+		free(tk->value);
+		tk->value = NULL;
+	}
 }
 
-void readCurrentAndAdvance(Lexer* l){
-    if (l->pos >= l->inputLen){
-        l->ch = l->input[l->pos] == '\0';
-    } else {
-    l->ch = l->input[l->pos];
-    }
- l->pos++; 
+void destroyLexer(Lexer* l){
+	if (l == NULL) return;
+	free(l);
+	l = NULL;
 }
 
-bool isDigit (char c){
-    return c >= '0' && c <= '9';
+bool is_alpha(char c){
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-bool isLetter (char c){
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+bool is_digit(char c){
+	return (c >= '0' && c <= '9');
 }
 
-bool isIdentifier (char c){
-    return isLetter(c) || isDigit(c);
+bool is_alnum(char c){
+	return is_digit(c) || is_alpha(c);
 }
 
-Token makeT (TokenType t, char* val){
-    Token tk;
-    tk.type = t;
-    tk.value = val;
-return tk;
+bool is_whitspace(char c){
+	return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
 }
 
-Token readNum (Lexer* l){
-    size_t st = l->pos - 1;
-
-    while (isDigit(peek(l, 1))){
-        readCurrentAndAdvance(l);
-    }
-
-    size_t len = l->pos - st;
-    char* num = malloc(len + 1);
-    strncpy(num, &l->input[st], len);
-    num[len] = '\0';
-
-return makeT(TT_Number, num);    
+char peek(Lexer* l){
+	if (l->pos >= strlen(l->input)){
+		return '\0';
+	}
+return l->input[l->pos];
 }
 
-TokenType lookUpKey(char* str){
-    if (strcmp(str, "rtrn") == 0){
-        return TT_Return;
-    } else if (strcmp(str, "puts") == 0){
-        return TT_Print;
-    } else if (strcmp(str, "func") == 0){
-        return TT_Function;
-    } else if (strcmp(str, "If") == 0){
-        return TT_If;
-    } else if (strcmp(str, "Else") == 0){
-        return TT_Else;
-    } else {
-        return TT_Identifier;
-    }
+char peek_next(Lexer* l){
+	if (l->pos >= strlen(l->input)){
+		return '\0';
+	}
+return l->input[l->pos + 1];
 }
 
-Token readIdentifier (Lexer* x){
-    size_t st = x->pos - 1;
-    while (isIdentifier(peek(x, 1))){
-        readCurrentAndAdvance(x);
-    }
-
-    size_t len = x->pos - st;
-    char* iden = malloc(len + 1);
-    strncpy(iden, &x->input[st], len);
-    iden[len] = '\0';
-
-    TokenType type = lookUpKey(iden);
-return makeT(type, iden);
+void advance(Lexer* l){
+	char current = peek(l);
+	if (current == '\n'){
+		l->line++;
+		l->column = 0;
+	} else {
+		l->column++;
+	}
+l->pos++;
 }
 
-Token readStr (Lexer* e){
-    readCurrentAndAdvance(e);
-    size_t st = e->pos;
+char* scan_number(Lexer* l){
+	size_t st = l->pos;
 
-    while(e->ch != '"' && e->ch != '\0'){
-        if (e->ch == '\n'){
-            e->line++;
-        }
-    readCurrentAndAdvance(e);
-    }
+	while(is_digit(peek(l))){
+		advance(l);
+	}
 
-    size_t len = e->pos - st;
-    char* str = malloc(len + 1);
-    strncpy(str, &e->input[st], len);
-    str[len] = '\0';
+	size_t len = l->pos - st;
+	char* number = (char*)malloc(sizeof(len + 1));
+	if (number == NULL){
+		fprintf(stderr, "Generation Error: Failed to Allocate memory in scan_number\n");
+	return NULL;
+	}
+	strncpy(number, &l->input[st], len);
+	number[len] = '\0';
 
-    if (e->ch == '"'){
-        readCurrentAndAdvance(e);
-    }
-
-return makeT(TT_String, str);    
+return number;
 }
 
-void skws (Lexer* l){
-    while (l->ch == ' ' || l->ch == '\t' || l->ch == '\n'){
-        if (l->ch == '\n'){
-            l->line++;
-        }
-    readCurrentAndAdvance(l);
-    }
+char* scan_string(Lexer* l){
+	size_t st = l->pos;
+	while (peek(l) != '"' && peek(l) != '\0'){
+		advance(l);
+	}
+
+	if (peek(l) == '\0'){
+		fprintf(stderr, "Compiler Error: Unterminated string at line %ld", l->line);
+	return NULL;
+	}
+
+	size_t len = l->pos - st;
+	char* str = (char*)malloc(len + 1);
+	strncpy(str, &l->input[st], len);
+	str[len] = '\0';
+
+	advance(l);
+
+return str;
 }
 
-Token nextToken (Lexer* r){
-    skws(r);
+void skip_space(Lexer* l){
+	while (is_whitspace(peek(l))){
+		advance(l);
+	}
+}
 
-    if (r->pos >= strlen(r->input)){ 
-        Token tk;
-        tk.value = "";
-        tk.type = TT_EOF;
-        return tk;
-    }
+char* scan_identifier(Lexer* l){
+	size_t st = l->pos;
+	
+	advance(l);
 
-    Token t;
-    if (r->ch == '\0'){
-        return makeT(TT_EOF, "");
-    } else if (isDigit(r->ch)){
-        return readNum(r);
-    } else if (isLetter(r->ch)){
-        return readIdentifier(r);
-    } else if (r->ch == '"'){
-        return readStr(r);
-    }
+	while(is_alnum(peek(l))){
+		advance(l);
+	}
 
-    switch (r->ch){
-        case '(':
-            t = makeT(TT_Lparen,"(");
-            readCurrentAndAdvance(r);
-            return t;
-        case ')':
-            t  = makeT(TT_Rparen, ")");
-            readCurrentAndAdvance(r);
-            return t;
-        case ';':
-            t = makeT(TT_Semicolon, ";");
-            readCurrentAndAdvance(r);
-            return t;
-        case '{':
-            t = makeT(TT_LBrace, "{");
-            readCurrentAndAdvance(r);
-            return t;
-        case '}':
-            t = makeT(TT_RBrace, "}");
-            readCurrentAndAdvance(r);
-            return t;
-        case '+':
-            t = makeT(TT_Plus, "+");
-            readCurrentAndAdvance(r);
-            return t;
-        case '-':
-            t = makeT(TT_Minus, "-");
-            readCurrentAndAdvance(r);
-            return t;
-        case '/':
-            t = makeT(TT_Slash, "/");
-            readCurrentAndAdvance(r);
-            return t;
-        case '*':
-            t = makeT(TT_Astk, "*");
-            readCurrentAndAdvance(r);
-            return t;
-    }
+	size_t len = l->pos - st;
+	char* identifier = (char*)malloc(len + 1);
+	strncpy(identifier, &l->input[st], len);
+	identifier[len] = '\0';
 
-    t = makeT(TT_Unknown, &r->ch);
-    readCurrentAndAdvance(r);
-    return t;
+return identifier;
+}
+
+TokenType check_keyword(const char* txt){
+	if (txt == NULL){
+		return TT_Identifier;
+	}
+
+	if (strcmp(txt, "rtrn") == 0){
+		return TT_Return;
+	} else if (strcmp(txt, "outlog") == 0){
+		return TT_Print;
+	} else if (strcmp(txt, "method") == 0){
+		return TT_Function;
+	} else if (strcmp(txt, "if") == 0){
+		return TT_If;
+	} else if (strcmp(txt, "else") == 0){
+		return TT_Else;
+	} else if (strcmp(txt, "let") == 0){
+		return TT_Let;
+	}
+
+return TT_Identifier;
+}
+
+TokenType get_single_char_token(char c){
+	switch(c){
+		case '(':
+			return TT_LParen;
+		case ')':
+			return TT_RParen;
+		case '{':
+			return TT_LBrace;
+		case '}':
+			return TT_RBrace;
+		case ';':
+			return TT_Semicolon;
+		case ',':
+			return TT_Comma;
+		case '+':
+			return TT_Plus;
+		case '-':
+			return TT_Minus;
+		case '/':
+			return TT_Slash;
+		case '*':
+			return TT_Astk;
+		case '=':
+			return TT_Equals;
+		case ':':
+			return TT_Colon;
+		case '<':
+			return TT_Less;
+		case '>':
+			return TT_Greater;
+		default:
+			return TT_Unknown;
+	}
+}
+
+Token nextToken(Lexer* l){
+	Token tk;
+	tk.value = NULL;
+
+	skip_space(l);
+
+	char current = peek(l);
+	if (current == '\0'){
+		tk.type = TT_EOF;
+		return tk;
+	}
+
+	//Handle Strings...
+	if (current == '"'){
+		advance(l);
+		char* val = scan_string(l);
+		if (val == NULL){
+			tk.type = TT_Unknown;
+			return tk;
+		}
+		tk.type = TT_String;
+		tk.value = val;
+		return tk;
+	}
+
+	//Handle Numbers...
+	if (is_digit(current)){
+		char* val = scan_number(l);
+		if (val == NULL){
+			tk.type = TT_Unknown;
+			return tk;
+		}
+		tk.type = TT_Number;
+		tk.value = val;
+		return tk;
+	}
+
+	//Handle Identifiers and Keywords...
+	if (is_alpha(current)){
+		char* id_val = scan_identifier(l);
+		if (id_val == NULL){
+			tk.type = TT_Unknown;
+			return tk;
+		}
+		tk.type = check_keyword(id_val);
+		tk.value = id_val;
+		return tk;
+	}
+
+	//Handle single character tokens...
+	TokenType sct = get_single_char_token(current);
+	if(sct != TT_Unknown){
+		char* val = (char*)malloc(2);
+		val[0] = current;
+		val[1] = '\0';
+		advance(l);
+		tk.type = sct;
+		tk.value = val;
+		return tk;
+	}
+
+	advance(l);
+	tk.type = TT_Unknown;
+	return tk;
 }
 
 #endif

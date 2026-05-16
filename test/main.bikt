@@ -1,1 +1,12 @@
-puts
+method add(a,b){
+    rtrn a+b;
+}
+
+method main(){
+	let name: string = "Rhema Ugwu";
+	let age: int = 16;
+	outlog(name);
+    outlog(age);
+	rtrn 0;
+}
+
