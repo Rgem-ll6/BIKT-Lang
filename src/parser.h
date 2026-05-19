@@ -38,7 +38,7 @@ typedef struct {
 Expression* parseAdditiveExpr(Parser* p);
 Expression* parseMultiplicativeExpr(Parser* p);
 Expression* parseUnaryExpr(Parser* p);
-Expression* parseComparisonExpr(p);
+Expression* parseComparisonExpr(Parser* p);
 Expression* parsePrimaryExpr(Parser* p);
 
 //Statements...
@@ -773,7 +773,7 @@ Method* parseMethod(Parser* p){
         parser_advance(p);
 
         params = (char**)realloc(params, (param_count + 1) * sizeof(char*));
-        params[param_count];
+        params[param_count] = param;
         param_count++;
 
         if (parser_peek(p).type == TT_Comma){
@@ -783,7 +783,7 @@ Method* parseMethod(Parser* p){
         }
     }
 
-    if (parser_expect(p, TT_RParen, "Compiler Error: Expected ')' after method parameters\n")){
+    if (!parser_expect(p, TT_RParen, "Compiler Error: Expected ')' after method parameters\n")){
         free(method_name);
         return NULL;
     }
@@ -806,7 +806,7 @@ Method* parseMethod(Parser* p){
         if (stmt == NULL) continue;
 
         body = (Statement**)realloc(body, (body_count + 1) * sizeof(Expression*));
-        body[body_count];
+        body[body_count] = stmt;
         body_count++;
     }
 

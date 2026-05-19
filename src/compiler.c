@@ -21,12 +21,30 @@ bool isValidBiktFile(char* str){
 return strcmp(str + strlen(str) - 5, ".bikt") == 0;
 }
 
+char* getBaseName(const char* path){
+	const char* base = strrchr(path, '/');
+	base = base ? base + 1 : path;
+
+	const char* dot = strrchr(base, '.');
+	size_t len = dot ? (size_t)(dot - base) : strlen(base);
+
+	char* name = (char*)malloc(len + 1);
+	strncpy(name, base, len);
+	name[len] = '\0';
+	return name;
+}
+
 int main(int argc, char** argv)
 {
-    if (argc != 2){
-        fprintf(stderr, "Runtime Error: needs <file.bikt> argument!\n");
+    if (argc < 2){
+        fprintf(stderr, "Runtime Error: needs <file.bikt> argument!\nOr access other flags like '-v' or '--version' to access the current version");
     return -1;  
     }
+	if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0){
+		printf("FBC - First Bikt Compiler (test prototype) v1.0.0\n");
+		printf("Author: Ugwu Rhema");
+		return 0;
+	}
     FILE* file = fopen(argv[1], "r");
     if (file == NULL){
         fprintf(stderr, "Runtime Error: Failed to open file '%s'\n", argv[1]);
@@ -42,33 +60,67 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Compiler Error: Failed to read %s, its empty\n", argv[1]);
 		return -1;
 	}
-	printf("%s\n\n", sourceCode);
     fclose(file);
     
-    Lexer* lexer = initLexer(sourceCode);
-	if (lexer == NULL){
-		fprintf(stderr, "Error: Failed to initialize Lexer!\n");
+	//Stage 1, parsing and tokenizing...collab
+	Parser* parser = initParser(sourceCode);
+	if (parser == NULL){
+		fprintf(stderr, "Compiler Error: Failed to initialize Parser\n");
+		free(sourceCode);
 		return -1;
 	}
-	
-	printf("***TOKENIZING***\n");
-	Token tk = nextToken(lexer);
-	int tcount = 0;
-	
-	while (tk.type != TT_EOF){
-		tcount++;
 
-		printf("Token %d: %d", tcount, tk.type);
-		if (tk.value != NULL){
-			printf(", Value: %s", tk.value);
-		}
-
-		printf("\n");	
-		destroyToken(&tk);
-		tk = nextToken(lexer);
+	Program* ast = parseProgram(parser);
+	if (parser->has_error){
+		fprintf(stderr, "FBC: Parsing failed - Aborting\n");
+		free(sourceCode);
+		free(parser);
+		return -1;
 	}
 
-    free(sourceCode);
-    destroyLexer(lexer);
+	char* base = getBaseName(argv[1]);
+
+	char asm_path[256];
+	char obj_path[256];
+	char bin_path[256];
+	snprintf(asm_path, sizeof(asm_path), "output/%s.asm", base);
+	snprintf(obj_path, sizeof(obj_path), "output/%s.o", base);
+	snprintf(bin_path, sizeof(bin_path), "output/%s", base);
+
+	CodeGen* cg = initCodeGen(asm_path);
+	if (cg == NULL){
+		fprintf(stderr, "Compiler Error: failed to initialize Code Gen\n");
+		free(sourceCode);
+		free(base);
+		return -1;
+	}
+
+	genProgram(cg, ast);
+	destroyCodeGen(cg);
+
+	char nasm_cmd[512];
+	snprintf(nasm_cmd, sizeof(nasm_cmd), "nasm -f elf64 -o %s %s", asm_path, obj_path);
+	if (system(nasm_cmd) != 0){
+		fprintf(stderr, "FBC: NASM Assembly failed, aborting!");
+		free(sourceCode);
+		free(base);
+		return -1;
+	}
+
+	char ld_cmd[512];
+	snprintf(ld_cmd, sizeof(ld_cmd), "ld -o %s %s", bin_path, obj_path);
+	if(system(ld_cmd) != 0){
+		fprintf(stderr, "FBC: Linking failed, aborting!");
+		free(sourcCode);
+		free(base);
+		return -1;
+	}
+
+	printf("FBC: Build Successful -> %s", bin_path);
+	
+	free(sourceCode);
+	free(base);
+	free(parser);
+
     return 0;
 }
