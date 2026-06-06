@@ -67,6 +67,7 @@ typedef enum {
 	ASSIGN,
 	RETURN,
 	PRINT,
+	INPUT,
 	IF,
 	EXPR,
 	BLOCK
@@ -96,6 +97,10 @@ typedef struct {
 } PrintStmt;
 
 typedef struct {
+	char* var_name;
+} InputStmt;
+
+typedef struct {
 	Expression* condition;
 	Statement** then_branch;
 	size_t then_count;
@@ -115,6 +120,7 @@ typedef struct Statement {
 		AssignStmt assign_s;
 		ReturnStmt rtrn_s;
 		PrintStmt print_s;
+		InputStmt input_s;
 		IfStmt if_s;
 		BlockStmt blk_s;
 		ExprStmt expr_s;

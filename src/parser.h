@@ -243,7 +243,6 @@ Expression* parsePrimaryExpr(Parser* p){
 						arguments[arg_count] = next_arg;
 						arg_count++;
 					}
-				}
 			}
 
 			if (!parser_expect(p, TT_RParen, "Compiler Error: Expected closing parenthesis after function call")){
@@ -388,7 +387,7 @@ Statement* parseIfStatement(Parser* p){
 
 	Expression* condition = parseComparisonExpr(p);
 	if (condition == NULL){
-		fprintf(stderr, "Compiler Error: Failed to parse condititon expression '%s'", condition);
+		fprintf(stderr, "Compiler Error: Failed to parse condititon expression\n");
 		p->has_error = true;
 		return NULL;
 	}
@@ -474,6 +473,11 @@ Statement* parseStatement(Parser* p){
 	//'outlog' keyword...
 	if (parser_peek(p).type == TT_Print){
 		return parsePrintStatement(p);
+	}
+
+	//'inlog' keyword...
+	if (parser_peek(p).type == TT_Input){
+		return parseInputStatement(p);
 	}
 
 	//'if' keyword...
@@ -648,7 +652,7 @@ Statement* parseReturnStatement(Parser* p){
 		return NULL;
 	}
 
-    //AST* node, one of my favorites parts of the lexer hehe...
+    //AST* node, one of my favorites parts of the parser hehe...
     //Creating these AST nodes!
 	Statement* ret_stmt = (Statement*)malloc(sizeof(Statement));
 	ret_stmt->type = RETURN;

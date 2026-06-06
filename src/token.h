@@ -8,6 +8,7 @@ typedef enum {
     TT_String,
     TT_Identifier,
     TT_Print,
+	TT_Input,
     TT_Semicolon,
     TT_EOF,
     TT_Unknown,

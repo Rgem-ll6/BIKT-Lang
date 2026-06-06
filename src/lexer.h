@@ -155,6 +155,8 @@ TokenType check_keyword(const char* txt){
 		return TT_Return;
 	} else if (strcmp(txt, "outlog") == 0){
 		return TT_Print;
+	} else if (strcmp(txt, "inlog") == 0){
+		return TT_Input;
 	} else if (strcmp(txt, "method") == 0){
 		return TT_Function;
 	} else if (strcmp(txt, "if") == 0){

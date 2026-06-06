@@ -35,7 +35,7 @@ CodeGen* initCodeGen(const char* filename){
     cg->symtab = (SymbolTable*)malloc(sizeof(*(cg->symtab)));
     cg->symtab->entries = NULL;
     cg->symtab->count = 0;
-    cg->symtab->current_offset = 0;
+    cg->symtab->current_offset = 8;
     cg->label_count = 0;
     return cg;
 }
@@ -110,6 +110,9 @@ void genExpression(CodeGen* cg, Expression* expr){
     if (cg == NULL) return;
 
     switch (expr->type){
+		case EXPR_STRING:
+			emit_comment(cg, "string expression not yet supported");
+			break;
 		case EXPR_NUMBER:
 			emit(cg, "	mov rax, %ld", expr->data.number.value);
 			break;
@@ -142,7 +145,7 @@ void genExpression(CodeGen* cg, Expression* expr){
 		case EXPR_UNARY_OP: {
 			genExpression(cg, expr->data.uOP.operand);
 
-			if (strcmp(expr->data.uOP.operator, "-")){
+			if (strcmp(expr->data.uOP.operator, "-") == 0){
 				emit(cg, "	neg rax");
 			}
 			break;
@@ -246,7 +249,7 @@ void genMethod(CodeGen* cg, Method* method){
 
 	emit(cg, "%s: ", method->name);
 	emit(cg, "	push rbp");
-	emit(cg, "mov rbp, rsp");
+	emit(cg, "	mov rbp, rsp");
 	//reserve 128 bytes of stack space for local variables
 	emit(cg, "	sub rsp, 128");
 	const char* arg_regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
@@ -268,13 +271,15 @@ void genMethod(CodeGen* cg, Method* method){
 void genProgram(CodeGen* cg, Program* prog){
 	if (cg == NULL || prog == NULL) return;
 
+	emit(cg, "extern bikt_print");
+	emit(cg, "extern bikt_input");
 	emit(cg, "section .text");
 	emit(cg, "global _start");
 	emit(cg, "	extern bikt_print");
 	emit(cg, "");
 
-	for (size_t i = 0; i < program->func_count; ++i){
-		genMethod(cg, program->func[i]);
+	for (size_t i = 0; i < prog->func_count; ++i){
+		genMethod(cg, prog->funcs[i]);
 		emit(cg, "");
 	}
 
