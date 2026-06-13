@@ -23,6 +23,8 @@ typedef struct {
     FILE* output;
     SymbolTable* symtab;
     size_t label_count;
+	char** string_literals;
+	size_t string_count;
 } CodeGen;
 
 CodeGen* initCodeGen(const char* filename){
@@ -37,6 +39,8 @@ CodeGen* initCodeGen(const char* filename){
     cg->symtab->count = 0;
     cg->symtab->current_offset = 8;
     cg->label_count = 0;
+	cg->string_literals = NULL;
+	cg->string_count = 0;
     return cg;
 }
 
@@ -110,9 +114,16 @@ void genExpression(CodeGen* cg, Expression* expr){
     if (cg == NULL) return;
 
     switch (expr->type){
-		case EXPR_STRING:
-			emit_comment(cg, "string expression not yet supported");
+		case EXPR_STRING: {
+			cg->string_literals = (char**)realloc(cg->string_literals, (cg->string_count + 1) * sizeof(char*));
+			cg->string_literals[cg->string_count] = strdup(expr->data.string.value);
+			char lea_cmd[256];
+			snprintf(lea_cmd, sizeof(lea_cmd), "	lea rax, [rel str_%zu]", cg->string_count);
+			emit(cg, lea_cmd);
+			
+			cg->string_count++;
 			break;
+		}
 		case EXPR_NUMBER:
 			emit(cg, "	mov rax, %ld", expr->data.number.value);
 			break;
@@ -209,6 +220,9 @@ void genStatement(CodeGen* cg, Statement* st){
 			emit(cg, "	call bikt_print"); //<- this is the function, if your confused, 'bikt_print'
 			break;
 		}
+		case INPUT: {
+			break;
+		}
 		case IF: {
 			//the counter for labels(they are like functions for assembly)
 			size_t label = cg->label_count++;
@@ -275,7 +289,7 @@ void genProgram(CodeGen* cg, Program* prog){
 	emit(cg, "extern bikt_input");
 	emit(cg, "section .text");
 	emit(cg, "global _start");
-	emit(cg, "	extern bikt_print");
+	//emit(cg, "extern bikt_print");
 	emit(cg, "");
 
 	for (size_t i = 0; i < prog->func_count; ++i){
@@ -288,6 +302,18 @@ void genProgram(CodeGen* cg, Program* prog){
 	emit(cg, "	mov rax, 60");
 	emit(cg, "	mov rdi, 0");
 	emit(cg, "	syscall");
+
+	if (cg->string_count > 0) {
+		emit(cg, "");
+		emit(cg, "section .data");
+		for (size_t i = 0; i < cg->string_count; ++i) {
+			char data_cmd[1024];
+			snprintf(data_cmd, sizeof(data_cmd), "	str_%zu: db \"%s\", 0", i, cg->string_literals[i]);
+			emit(cg, data_cmd);
+			free(cg->string_literals[i]); 
+		}
+		free(cg->string_literals);
+	}
 }
 
 #endif

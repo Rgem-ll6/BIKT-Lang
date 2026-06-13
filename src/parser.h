@@ -1,11 +1,11 @@
 /*
 
 HEY, I'M THE AUTHOR OF BIKT, GO BY THE NAME 'RHEMA' BUT MOST PEOPLE CALL ME
-'RHEMA', I'M A 16 YEAR OLD LOW LEVEL AND SYSTEM LEVEL DEVELOPER, I BASICALLY HATE ALL HIGH LEVEL LANGUAGES
-SOMETIMES I THINK I'M SCHIZOPHRENIC CUS I THINK I HEAR VOICES AND HALLUCINATE BUT IT
+'RHEMA', I'M A LOW LEVEL DEVELOPER ONLY, EZZ
+SOMETIMES I THINK I'M SCHIZO...
 COULD ALL BE JUST PART OF MY IMAGINATION.
-I PRETTY MUCH DON'T LIKE SOCIALIZING PRETTY MUCH NOT INTENTIONALLY, I MEAN I TRY!
-BUT SINCE THAT'S IMPOSSIBLE I CAME UP WITH AN IDEA, BIKT AND BIKT-OS, SO UHH TO WRAP THINGS UP
+I PRETTY MUC DON'T LIKE...
+BUT SINCE THA'S IMPOSSIBLE I CAME UP WITH AN IDEA, BIKT AND BIKT-OS, SO UHH TO WRAP THINGS UP
 IF YOU'RE ACTUALLY READING THIS AND PLAN ON READING THE REST OF THE SOURCECODE
 JUST KNOW YOU'RE ABOUT TO READ 800+ LINES OF PURE MISERY...
 EVERY LINE FROM 200+ WAS WRITTEN IN PAIN, I'M ALSO PRETTY SURE I'VE GONE SENILE, BUT OH WELL
@@ -40,6 +40,7 @@ Expression* parseMultiplicativeExpr(Parser* p);
 Expression* parseUnaryExpr(Parser* p);
 Expression* parseComparisonExpr(Parser* p);
 Expression* parsePrimaryExpr(Parser* p);
+Expression* parseInputExpression(Parser* p);
 
 //Statements...
 Statement* parseIfStatement(Parser* p);
@@ -181,6 +182,10 @@ Expression* parseAdditiveExpr(Parser* p){
 Expression* parsePrimaryExpr(Parser* p){
 	if (p == NULL || p->has_error) return NULL;
 	Token current = parser_peek(p);
+
+	if (current.type == TT_Input){
+		return parseInputExpression(p);
+	}
 
 	// Number Literals
 	if (current.type == TT_Number){
@@ -476,9 +481,9 @@ Statement* parseStatement(Parser* p){
 	}
 
 	//'inlog' keyword...
-	if (parser_peek(p).type == TT_Input){
-		return parseInputStatement(p);
-	}
+	//i/f (parser_peek(p).type == TT_Input){
+	//	return parseInputStatement(p);
+	//}
 
 	//'if' keyword...
 	if (parser_peek(p).type == TT_If){
@@ -694,6 +699,28 @@ Statement* parsePrintStatement(Parser* p){
 	print_stmt->data.print_s.value = what_expr;
 
 	return print_stmt;
+}
+
+Expression* parseInputExpression(Parser* p) {
+    if (!parser_expect(p, TT_Input, "Compiler Error: Expected 'inlog'\n")) {
+        return NULL;
+    }
+
+    if (!parser_expect(p, TT_LParen, "Compiler Error: Expected '(' after 'inlog'\n")) {
+        return NULL;
+    }
+    if (!parser_expect(p, TT_RParen, "Compiler Error: Expected ')' after 'inlog('\n")) {
+        return NULL;
+    }
+
+    Expression* expr = (Expression*)malloc(sizeof(Expression));
+    expr->type = EXPR_FUNCTION_CALL;
+    
+    expr->data.func.func_name = strdup("bikt_input");
+    expr->data.func.args = NULL;
+    expr->data.func.arg_c = 0;
+
+    return expr;
 }
 
 //This is like a scope, not like actually, IT IS a scope

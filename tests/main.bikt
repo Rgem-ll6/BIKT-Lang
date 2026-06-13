@@ -2,6 +2,7 @@ method main(){
 	let x: int = 6;
 	let y: int = 10;
 	let x: int = x + y;
+	outlog(x);
 	rtrn 0;
 }
 
