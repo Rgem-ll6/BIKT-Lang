@@ -1,0 +1,12 @@
+
+method add(a, b){
+	let x: int = a + b;
+	rtrn x;
+}
+
+method main(){
+	let age: int = 18;
+	if (age < 20){
+		let m: int = 5 + age;
+	}
+}

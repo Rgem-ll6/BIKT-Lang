@@ -1,12 +1,7 @@
-method add(a,b){
-    rtrn a+b;
-}
-
 method main(){
-	let name: string = "Rhema Ugwu";
-	let age: int = 16;
-	outlog(name);
-    outlog(age);
+	let x: int = 6;
+	let y: int = 10;
+	let x: int = x + y;
 	rtrn 0;
 }
 
